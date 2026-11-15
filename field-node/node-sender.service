@@ -1,0 +1,13 @@
+[Unit]
+Description=Cold Case field node sender
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=hecker
+ExecStart=/usr/bin/python3 /home/hecker/node_sender.py --url http://GRAVITY_IP_OR_NAME:PORT/api/node
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

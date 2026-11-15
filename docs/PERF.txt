@@ -1,0 +1,13 @@
+COLD CASE — frame-rate under CPU throttling (tools/perf.py)
+Environment: headless Google Chrome on a Mac, 1280x720, Emulation.setCPUThrottlingRate. THIS IS NOT A Pi 4 — it is an approximation
+(target: >= 30 fps at 4-6x throttle). Measured BEFORE the touch-hardening pass; re-run `tools/perf.py` on the Pi itself.
+
+screen                         cpu    first 3 s   settled     auto-degrade (quality -> low)
+NOW                            x1     58.0 fps    60.0        not needed
+NOW                            x4     58.0        60.0        not needed
+NOW                            x6     55.0        60.0        not needed
+NOW                            x12    45.0        59.8        not needed
+SEASON                         x1/4/6 60/57/54    60          not needed
+SEASON                         x12    39.0        59.0        not needed
+
+Reading: NOW and SEASON hold >= 54 fps at 6x CPU throttle (Mac, not a Pi). The watchdog in web/js/perf.js drops to low quality if fps stays under 30. (Time Machine rows removed with that screen.)

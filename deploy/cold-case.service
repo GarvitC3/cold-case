@@ -1,0 +1,17 @@
+[Unit]
+Description=COLD CASE backend (NASA POWER + field node)
+After=network.target
+
+[Service]
+Type=simple
+User=@USER@
+Group=@USER@
+SupplementaryGroups=dialout
+WorkingDirectory=@APPDIR@
+ExecStart=@APPDIR@/.venv/bin/python -m app
+Restart=always
+RestartSec=2
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target

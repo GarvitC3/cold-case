@@ -1,0 +1,24 @@
+[site]
+default = "mississauga"
+
+[node]
+mode = "indoor_demo"
+serial_port = ""
+baud = 115200
+snow_filter_s = 15
+node_token = ""
+
+[ice]
+alpha_bare = 2.7
+alpha_low = 2.2
+alpha_high = 3.2
+snow_lambda_cm = 12.0
+snow_floor = 0.5
+
+[display]
+units = "metric"
+reduce_motion = false
+
+[server]
+host = "0.0.0.0"
+port = 8000

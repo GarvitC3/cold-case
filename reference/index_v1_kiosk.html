@@ -1,0 +1,75 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Earth System Trend Detective</title><style>
+*{box-sizing:border-box;margin:0}
+body{background:#0b1220;color:#e8eefc;font-family:system-ui,sans-serif;height:100vh;overflow:hidden;display:grid;grid-template-rows:auto 1fr auto;padding:12px;gap:10px}
+header{display:flex;justify-content:space-between;align-items:baseline}
+h1{font-size:18px;font-weight:600;letter-spacing:.3px}h1 span{color:#7fb4ff}
+#dot{font-size:12px;color:#8fa3c7}#dot i{display:inline-block;width:8px;height:8px;border-radius:50%;background:#555;margin-right:6px}
+#dot.on i{background:#3ddc97;box-shadow:0 0 8px #3ddc97}
+main{display:grid;grid-template-columns:260px 1fr;gap:12px;min-height:0}
+.card{background:#121c33;border:1px solid #1f2d4d;border-radius:14px;padding:12px;min-height:0}
+.live{display:flex;flex-direction:column;gap:8px}
+.k{font-size:11px;color:#8fa3c7;text-transform:uppercase;letter-spacing:1px}
+.v{font-size:40px;font-weight:700;line-height:1.05}.v small{font-size:16px;font-weight:500;color:#8fa3c7}
+.hot{color:#ffb86b}.cold{color:#7fd4ff}
+button{background:#1c2b4d;color:#cfe0ff;border:1px solid #2c4170;border-radius:10px;padding:7px 10px;font-size:12px}
+button.sel{background:#2f6bff;border-color:#2f6bff;color:#fff}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.right{display:flex;flex-direction:column}
+canvas{width:100%;flex:1;min-height:0}
+.badge{display:inline-block;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:700}
+.FRAGILE{background:#4a3a12;color:#ffd166}.ROBUST{background:#12402c;color:#3ddc97}.NO{background:#3a1f26;color:#ff8a9a}
+.line{font-size:13px;color:#b8c8e8;margin-top:6px;line-height:1.35}
+footer{font-size:10px;color:#6f84ab}
+</style></head><body>
+<header><h1>Earth System <span>Trend Detective</span></h1><div id="dot"><i></i><span id="dt">no sensor</span></div></header>
+<main>
+ <div class="card live">
+  <div><div class="k">Air temperature (field node)</div><div class="v" id="t">--<small> °C</small></div></div>
+  <div><div class="k">Snow depth</div><div class="v" id="s">--<small> cm</small></div>
+   <button onclick="cal()" style="margin-top:4px">Set ground level</button></div>
+  <div><div class="k">Humidity</div><div class="v" id="h" style="font-size:28px">--<small> %</small></div></div>
+  <canvas id="sp" style="height:60px;flex:none"></canvas>
+ </div>
+ <div class="card right">
+  <div class="tabs" id="tabs"></div>
+  <div><span class="badge" id="b"></span> <span id="hd" style="font-size:13px;color:#b8c8e8"></span></div>
+  <canvas id="c"></canvas>
+  <div class="line" id="ln"></div>
+ </div>
+</main>
+<footer>Freezing degree-days Nov–Apr from NASA POWER monthly T2M (MERRA-2 reanalysis), 1982–2025. Monthly means understate cold snaps; the model likely overstates warming vs. thermometers. Ice thickness: Stefan estimate, α=2.7, bare ice.</footer>
+<script>
+let A=[],cur=0;
+const $=id=>document.getElementById(id);
+async function live(){try{const r=await (await fetch('/api/live')).json();const L=r.live;
+ $('dot').className=L?'on':'';$('dt').textContent=L?'node live ('+r.port+')':'no sensor';
+ $('t').innerHTML=L?L.temp_c.toFixed(1)+'<small> °C</small>':'--<small> °C</small>';
+ $('t').className='v '+(L&&L.temp_c<0?'cold':'hot');
+ $('h').innerHTML=L?Math.round(L.rh)+'<small> %</small>':'--<small> %</small>';
+ $('s').innerHTML=r.snow_cm!=null?r.snow_cm.toFixed(0)+'<small> cm</small>':'--<small> cm</small>';
+ spark(r.hist)}catch(e){}}
+function spark(h){const c=$('sp'),x=c.getContext('2d');c.width=c.clientWidth*2;c.height=c.clientHeight*2;x.clearRect(0,0,c.width,c.height);
+ const v=h.map(p=>p[1]).filter(a=>a!=null);if(v.length<2)return;const lo=Math.min(...v),hi=Math.max(...v)+.01;
+ x.strokeStyle='#7fb4ff';x.lineWidth=3;x.beginPath();v.forEach((a,i)=>{const X=i/(v.length-1)*c.width,Y=c.height-6-(a-lo)/(hi-lo)*(c.height-12);i?x.lineTo(X,Y):x.moveTo(X,Y)});x.stroke()}
+async function cal(){await fetch('/api/calibrate',{method:'POST'});live()}
+function draw(){const s=A[cur];if(!s)return;const c=$('c'),x=c.getContext('2d');c.width=c.clientWidth*2;c.height=c.clientHeight*2;
+ const W=c.width,Hh=c.height,P=50,y=s.years,f=s.fdd,lo=Math.min(...f)*.95,hi=Math.max(...f)*1.03;
+ const X=a=>P+(a-y[0])/(y[y.length-1]-y[0])*(W-P-14),Y=a=>Hh-30-(a-lo)/(hi-lo)*(Hh-44);
+ x.clearRect(0,0,W,Hh);x.font='20px system-ui';x.fillStyle='#6f84ab';x.strokeStyle='#1f2d4d';x.lineWidth=1;
+ for(let i=0;i<=4;i++){const v=lo+(hi-lo)*i/4;x.beginPath();x.moveTo(P,Y(v));x.lineTo(W-14,Y(v));x.stroke();x.fillText(Math.round(v),4,Y(v)+6)}
+ [1990,2000,2010,2020].forEach(a=>x.fillText(a,X(a)-20,Hh-6));
+ x.strokeStyle='#3b5bdb';x.lineWidth=3;x.beginPath();f.forEach((a,i)=>i?x.lineTo(X(y[i]),Y(a)):x.moveTo(X(y[i]),Y(a)));x.stroke();
+ x.strokeStyle='#ffb86b';x.setLineDash([10,8]);x.lineWidth=4;x.beginPath();
+ x.moveTo(X(y[0]),Y(s.intercept+s.sen_per_year*y[0]));x.lineTo(X(y[y.length-1]),Y(s.intercept+s.sen_per_year*y[y.length-1]));x.stroke();x.setLineDash([])}
+function show(){const s=A[cur];if(!s)return;const v=s.verdict==='NO TREND'?'NO':s.verdict;
+ $('b').className='badge '+v;$('b').textContent=s.verdict+' '+s.score+'/'+s.of;
+ $('hd').textContent=s.name+' · freezing degree-days per winter';
+ $('ln').innerHTML='Falling <b>'+Math.abs(s.slope)+'</b> °C-days per decade (95% CI '+s.ci_lo+' to '+s.ci_hi+'), p='+s.p+
+  '. Stability across sub-periods: '+Math.round(s.window*100)+'% (needs 60%). Stefan ice estimate: '+s.ice_first+' cm (first 10 yrs) → '+s.ice_last+' cm (last 10 yrs).';
+ [...$('tabs').children].forEach((b,i)=>b.className=i===cur?'sel':'');draw()}
+async function load(){const r=await (await fetch('/api/analysis')).json();
+ if(!r.analysis){$('ln').textContent=r.status==='starting'?'Running trend analysis… (needs internet the first time)':r.status;setTimeout(load,4000);return}
+ A=r.analysis;$('tabs').innerHTML='';A.forEach((s,i)=>{const b=document.createElement('button');b.textContent=s.name.split(' ')[0];b.onclick=()=>{cur=i;show()};$('tabs').appendChild(b)});show()}
+load();live();setInterval(live,2000);addEventListener('resize',draw);
+</script></body></html>
